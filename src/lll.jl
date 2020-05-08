@@ -42,7 +42,6 @@ function lll!(basis::Array{<:Array{CType}}, cache) where {CType<:AbstractFloat}
     if i == 0
       break
     else
-      @show "swap"
       tmp = basis[i]
       basis[i] = basis[i+1]
       basis[i+1] = tmp 
