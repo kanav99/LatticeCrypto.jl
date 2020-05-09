@@ -1,50 +1,21 @@
-mutable struct Solution{vecType, normType, tmpType, bType}
-	minvec::vecType
-	minnorm::normType
-	basis::bType
-	tmp::tmpType
-end
-
-function update_solution!(solution, v)
-	tmp = solution.tmp
-	basis = solution.basis
-	tmp .= false
-	for i in 1:length(v)
-		@. tmp += basis[i] * v[i]
-	end
-	nrm = norm(tmp)
-	if !iszero(nrm) && nrm < solution.minnorm
-		solution.minnorm = nrm
-		solution.minvec .= v
-	end
-end
-
-(s::Solution)(v) = update_solution!(s, v)
-
-function Base.show(io::IO, s::Solution)
-  println(io, "coefficients: ")
-  println(io, s.minvec)
-  println(io, "norm: ")
-  println(io, s.minnorm)
-end
-
 """
 	enumerate_lattice(basis, R)
 
 Generate neccesary data and start enumeration DFS for basis `basis` which visits all the nodes
 with norm less than `R`
 """
-function enumerate_lattice(basis, R)
+function enumerate_lattice(basis, R; lll=true)
 	# number of basis vectors
 	n = length(basis)
+	lll && run_lll!(basis)
 	# calculate bstar
-	bstar = deepcopy(basis)
+	bstar = allocate_btilde(basis)
 	generate_btilde!(bstar, basis)
 	# calculate norms and normsquare of bstar
 	bstarnormsquare = [ normsquare(v) for v in bstar ]
 	bstarnorm = [ norm(v) for v in bstar ]
 	# we don't want to calculate μij all the time, lets precalculate them
-	μarray = zeros(eltype(basis[1]), n, n)
+	μarray = zeros(eltype(bstar[1]), n, n)
 	for i in 2:n
 		for j in 1:(i-1)
 			μarray[i, j] = μ(bstar[j], basis[i])
@@ -53,7 +24,7 @@ function enumerate_lattice(basis, R)
 	# start leaf vector with all zeros
 	v = [ 0 for _ in 1:n ]
 	# callback, what to do when a leaf node is encountered
-	solution = Solution(zeros(Int64, n), Inf, basis, similar(basis[1]))
+	solution = Solution(zeros(eltype(basis[1]), n), Inf, basis, similar(bstar[1]))
 	# start DFS with depth 1
 	@time enumeration_tree_bfs_step(1, v, n, μarray, bstarnormsquare, bstarnorm, R, solution)
 	solution
@@ -99,6 +70,17 @@ function enumeration_tree_bfs_step(depth, v, n, μ, bstarnormsquare, bstarnorm, 
 	end
 
 	# ends of radius need to be cautiously handled 
+	if real_center + i <= center + radius
+		v[n - depth + 1] = real_center + i
+		enumeration_tree_bfs_step(depth + 1, v, n, μ, bstarnormsquare, bstarnorm, R, callback)
+	end
+
+	if real_center - i >= center - radius
+		v[n - depth + 1] = real_center - i
+		enumeration_tree_bfs_step(depth + 1, v, n, μ, bstarnormsquare, bstarnorm, R, callback)
+	end
+
+	i += 1
 	if real_center + i <= center + radius
 		v[n - depth + 1] = real_center + i
 		enumeration_tree_bfs_step(depth + 1, v, n, μ, bstarnormsquare, bstarnorm, R, callback)
