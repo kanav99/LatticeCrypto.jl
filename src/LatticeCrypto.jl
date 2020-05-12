@@ -1,5 +1,7 @@
 module LatticeCrypto
 
+  using LinearAlgebra
+
   include("utils.jl")
   include("lll.jl")
   include("solution.jl")
