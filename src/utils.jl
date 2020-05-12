@@ -1,35 +1,18 @@
 
 # calculates ||v||^2
-function normsquare(v::Array{CType}) where {CType<:AbstractFloat}
-  s = zero(CType)
-  for i in v
-    s += i^2
-  end
-  return s
-end
+normsquare(v) = LinearAlgebra.dot(v, v)
 
 # calculates ||v||
-function norm(v::Array{CType}) where {CType<:AbstractFloat}
-  return sqrt(normsquare(v))
-end
+norm(v) = sqrt(normsquare(v))
 
 # computes μ(v, u) = (v.u)/||v||^2
 # used in gram-schmidt orthogonalization and LLL Algorithm
 # used in calculating projection of `j` on `i`
 @inline μ(i, j) = LinearAlgebra.dot(i, j) / normsquare(i)
 
-function allocate_btilde(basis::Array{<:Array{<:BigInt}})
-  n = length(basis)
-  return [ similar(basis[1], BigFloat) for i in 1:n ]
-end
-
-function allocate_btilde(basis::Array{<:Array{<:Integer}})
-  n = length(basis)
-  return [ similar(basis[1], Float64) for i in 1:n ]
-end
-
 function allocate_btilde(basis::Array{<:Array{CType}}) where {CType}
-  return deepcopy(basis)
+  n = length(basis)
+  return [ similar(basis[1], float(CType)) for i in 1:n ]
 end
 
 function determinant(basis::Array{<:Array{CType}}) where {CType}
